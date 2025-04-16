@@ -55,7 +55,7 @@ val errorproneExtension = project.extensions.create<ErrorProneProjectExtension>(
         "JavaUtilDate", // We are fine with using Date
         "StringSplitter", // We are fine with using String.split() as is
         "InlineMeSuggester", // Only suppression seems to actually "fix" this, so make it global
-)
+    )
 
     nullawayEnabled.convention(false)
 }
@@ -66,15 +66,64 @@ nullaway {
     annotatedPackages.add("org.gradle")
 }
 
+enum class NullawayState {
+    ENABLED, DISABLED
+}
+
+val nullawayAttribute = Attribute.of("org.gradle.build.nullaway", NullawayState::class.java)
+val nullawayAttributeValue = errorproneExtension.nullawayEnabled.map { if (it) NullawayState.ENABLED else NullawayState.DISABLED }
+
+class NullawayCompatibilityRule : AttributeCompatibilityRule<NullawayState> {
+    override fun execute(details: CompatibilityCheckDetails<NullawayState>) {
+        with(details) {
+            when {
+                // Nullaway-enabled targets must not depend on nullaway-disabled ones.
+                // They can depend on nullaway-undefined, which any external dependency is going to be.
+                producerValue == NullawayState.DISABLED && consumerValue == NullawayState.ENABLED -> incompatible()
+                else -> compatible()
+            }
+        }
+    }
+}
+
+dependencies {
+    attributesSchema {
+        attribute(nullawayAttribute) {
+            compatibilityRules.add(NullawayCompatibilityRule::class.java)
+        }
+    }
+}
+
+fun configureNullawayAttributes(confName: String) {
+    configurations.named(confName) {
+        attributes {
+            attributeProvider(nullawayAttribute, nullawayAttributeValue)
+        }
+    }
+}
+
 project.plugins.withType<JavaBasePlugin> {
     project.extensions.getByName<SourceSetContainer>("sourceSets").configureEach {
+        val isMainSourceSet = (name == "main")
+
         val extension = this.extensions.create<ErrorProneSourceSetExtension>(
             "errorprone",
             project.objects.property<Boolean>()
         ).apply {
             // Enable it only for the main source set by default, as incremental Groovy
             // joint-compilation doesn't work with the Error Prone annotation processor
-            enabled.convention(name == "main")
+            enabled.convention(isMainSourceSet)
+        }
+
+        if (isMainSourceSet) {
+            // We don't care about nullaway in test fixtures or tests, they're written in Groovy anyway.
+            // TODO(mlopatkin): figure out the Kotlin-only story.
+            configureNullawayAttributes(compileClasspathConfigurationName)
+
+            project.plugins.withType<JavaLibraryPlugin> {
+                configureNullawayAttributes(apiElementsConfigurationName)
+                configureNullawayAttributes(runtimeElementsConfigurationName)
+            }
         }
 
         @Suppress("UnstableApiUsage")
