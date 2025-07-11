@@ -217,6 +217,7 @@ public class ResolveState implements ComponentStateFactory<ComponentState> {
     }
 
     public NodeState getNode(ComponentState component, VariantGraphResolveState variant, boolean selectedByVariantAwareResolution) {
+        // TODO: Use a proper VariantIdentifier here.
         return nodes.computeIfAbsent(variant.getInstanceId(), rci -> {
             NodeState node = new NodeState(idGenerator.nextGraphNodeId(), component, this, variant, selectedByVariantAwareResolution);
             component.addNode(node);
