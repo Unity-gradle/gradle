@@ -1414,6 +1414,13 @@
     "crossVersionTests": false
   },
   {
+    "name": "version-resolver",
+    "path": "platforms/core-runtime/version-resolver",
+    "unitTests": false,
+    "functionalTests": false,
+    "crossVersionTests": false
+  },
+  {
     "name": "versioned-cache",
     "path": "platforms/core-runtime/versioned-cache",
     "unitTests": true,

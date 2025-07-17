@@ -104,6 +104,7 @@ val core = platform("core") {
         subproject("time")
         subproject("tooling-api-provider")
         subproject("versioned-cache")
+        subproject("version-resolver")
         subproject("wrapper-main")
         subproject("wrapper-shared")
     }

@@ -47,6 +47,7 @@ dependencies {
     implementation(projects.serviceLookup)
     implementation(projects.wrapperShared)
     implementation(projects.resources)
+    implementation(projects.versionResolver)
 
     implementation(libs.groovy)
     implementation(libs.groovyTemplates)

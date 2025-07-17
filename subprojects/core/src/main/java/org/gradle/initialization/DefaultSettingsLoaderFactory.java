@@ -17,9 +17,11 @@
 package org.gradle.initialization;
 
 import org.gradle.api.internal.cache.CacheConfigurationsInternal;
+import org.gradle.api.internal.file.FileOperations;
 import org.gradle.api.internal.initialization.CacheConfigurationsHandlingSettingsLoader;
 import org.gradle.api.internal.project.ProjectStateRegistry;
 import org.gradle.api.problems.internal.InternalProblems;
+import org.gradle.api.resources.TextResourceFactory;
 import org.gradle.configuration.project.BuiltInCommand;
 import org.gradle.initialization.layout.BuildLayoutFactory;
 import org.gradle.internal.build.BuildIncluder;
@@ -41,6 +43,7 @@ public class DefaultSettingsLoaderFactory implements SettingsLoaderFactory {
     private final List<BuiltInCommand> builtInCommands;
     private final CacheConfigurationsInternal cacheConfigurations;
     private final InternalProblems problems;
+    private final TextResourceFactory textResourceFactory;
 
     public DefaultSettingsLoaderFactory(
         SettingsProcessor settingsProcessor,
@@ -52,7 +55,8 @@ public class DefaultSettingsLoaderFactory implements SettingsLoaderFactory {
         InitScriptHandler initScriptHandler,
         List<BuiltInCommand> builtInCommands,
         CacheConfigurationsInternal cacheConfigurations,
-        InternalProblems problems
+        InternalProblems problems,
+        FileOperations fileOperations
     ) {
         this.settingsProcessor = settingsProcessor;
         this.buildRegistry = buildRegistry;
@@ -64,25 +68,30 @@ public class DefaultSettingsLoaderFactory implements SettingsLoaderFactory {
         this.builtInCommands = builtInCommands;
         this.cacheConfigurations = cacheConfigurations;
         this.problems = problems;
+        this.textResourceFactory = fileOperations.getResources().getText();
     }
 
     @Override
     public SettingsLoader forTopLevelBuild() {
         return new GradlePropertiesHandlingSettingsLoader(
-            new CacheConfigurationsHandlingSettingsLoader(
-                new InitScriptHandlingSettingsLoader(
-                    new CompositeBuildSettingsLoader(
-                        new ChildBuildRegisteringSettingsLoader(
-                            new CommandLineIncludedBuildSettingsLoader(
-                                defaultSettingsLoader()
+            new GradleVersionCheckingSettingsLoader(
+                new CacheConfigurationsHandlingSettingsLoader(
+                    new InitScriptHandlingSettingsLoader(
+                        new CompositeBuildSettingsLoader(
+                            new ChildBuildRegisteringSettingsLoader(
+                                new CommandLineIncludedBuildSettingsLoader(
+                                    defaultSettingsLoader()
+                                ),
+                                buildIncluder
                             ),
-                            buildIncluder
+                            buildRegistry
                         ),
-                        buildRegistry
+                        initScriptHandler
                     ),
-                    initScriptHandler
+                    cacheConfigurations
                 ),
-                cacheConfigurations
+                textResourceFactory,
+                buildLayoutFactory
             ),
             buildLayoutFactory,
             gradlePropertiesController

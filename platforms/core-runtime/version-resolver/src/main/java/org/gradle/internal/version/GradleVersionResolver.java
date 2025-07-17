@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.gradle.api.tasks.wrapper.internal;
+package org.gradle.internal.version;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -64,6 +64,16 @@ public class GradleVersionResolver {
             this.gradleVersion = null;
             this.gradleVersionRequest = gradleVersionRequest;
         }
+    }
+
+    public GradleVersion getGradleVersionFromUrl(String url) throws Exception {
+
+            String version = getVersionFromUrl(textResourceFactory.fromUri(getApiEndpoint("all")).asString(), url);
+            if (version == null) {
+                throw new IllegalArgumentException("Could not find any version of Gradle with a download url of '" + url + "'.", null);
+            }
+
+            return GradleVersion.version(version);
     }
 
     private GradleVersion resolve() {
@@ -154,6 +164,17 @@ public class GradleVersionResolver {
             .map(m -> m.get("version"))
             .filter(Objects::nonNull)
             .collect(Collectors.toList());
+    }
+
+    @Nullable
+    static String getVersionFromUrl(String json, String downloadUrl) {
+        Type type = new TypeToken<List<Map<String, String>>>() {}.getType();
+        List<Map<String, String>> map = new Gson().fromJson(json, type);
+        return map.stream()
+            .filter(m -> m.get("downloadUrl").equals(downloadUrl))
+            .map(m -> m.get("version"))
+            .findFirst()
+            .orElse(null);
     }
 
     private static GradleVersion parseVersionString(String gradleVersionString) {

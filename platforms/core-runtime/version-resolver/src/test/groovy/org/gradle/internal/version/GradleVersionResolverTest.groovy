@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 the original author or authors.
+ * Copyright 2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.gradle.api.tasks.wrapper.internal
+package org.gradle.internal.version
 
 import org.gradle.api.GradleException
 import spock.lang.Specification
@@ -56,5 +56,26 @@ class GradleVersionResolverTest extends Specification {
 
         then:
         versions == ["7.6", "9.0.3"]
+    }
+
+    def "get version from download url for #expectedVersion"() {
+        when:
+        def version = GradleVersionResolver.getVersionFromUrl(
+            """[{"version" : "7.6", "downloadUrl": "https://services.gradle.org/distributions/gradle-7.6-bin.zip"},
+                    {"version" : "7.6-rc-3", "downloadUrl": "https://services.gradle.org/distributions/gradle-7.6-rc-3-bin.zip"},
+                    {"version" : "9.0.3", "downloadUrl": "https://services.gradle.org/distributions/gradle-9.0.3-bin.zip"},
+                    {"version" : "9.1", "downloadUrl": "https://services.gradle.org/distributions/gradle-9.1-bin.zip"},
+                    {"version" : "9.0.0-rc-1", "downloadUrl": "https://services.gradle.org/distributions/gradle-9.0.0-rc-1-bin.zip"}]""",
+            url
+        )
+
+        then:
+        version == expectedVersion
+
+        where:
+        url                                                                   | expectedVersion
+        'https://services.gradle.org/distributions/gradle-7.6-bin.zip'        | "7.6"
+        'https://services.gradle.org/distributions/gradle-9.0.0-rc-1-bin.zip' | "9.0.0-rc-1"
+        'https://services.gradle.org/distributions/gradle-9.0.3-bin.zip'      | "9.0.3"
     }
 }
