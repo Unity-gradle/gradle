@@ -75,7 +75,7 @@ vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv -->
 
 
 <a name="build-authoring"></a>
-### CLI improvement
+### CLI improvements
 
 #### Plain console with colors
 
@@ -149,7 +149,7 @@ android {
 }
 ```
 
-### Configuration Improvements
+### Configuration improvements
 
 #### Simpler target package configuration for Antlr 4
 The AntlrTask class now supports explicitly setting the target package for generated code when using Antlr 4.
@@ -196,6 +196,19 @@ publications.withType<MavenPublication>().configureEach {
   }
 }
 ```
+
+<a name="config-cache"></a>
+### Configuration cache improvements
+
+Gradle's [configuration cache](userguide/configuration_cache.html) improves build performance by caching the result of the configuration phase. Gradle uses the configuration cache to skip the configuration phase entirely when nothing that affects the build configuration has changed.
+
+#### Encryption honors the JVM's default keystore type
+
+Before this release, the Gradle encryption keystore (used only by the configuration cache at this time) 
+would always use the PKCS12 keystore type (which can be overridden using the [`keystore.type` security property](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/security/KeyStore.html#getDefaultType())). 
+Starting with this release, Gradle will try to honor the JVM's default keystore type
+if it can store symmetric keys. If a known standard JVM keystore type that only supports asymmetric keys is detected,
+Gradle will fall back into using PKCS12.
 
 <!-- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ADD RELEASE FEATURES ABOVE
