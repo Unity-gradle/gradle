@@ -16,31 +16,46 @@
 
 package org.gradle.process.internal.worker
 
-import org.gradle.integtests.fixtures.AbstractIntegrationSpec
-import org.gradle.testdistribution.LocalOnly
 
-@LocalOnly(because = "Cannot manipulate path in a way that is both CC and TD compatible")
+import org.gradle.integtests.fixtures.AbstractIntegrationSpec
+import org.gradle.util.internal.TextUtil
+
 class DefaultWorkerProcessBuilderIntegrationTest extends AbstractIntegrationSpec {
 
     def "test classpath does not contain nonexistent entries"() {
         given:
-        javaFile("src/test/java/ClasspathTest.java", '''
+        def existingDir = TextUtil.escapeString(createDir("existing").absolutePath)
+        def nonExistingDir = TextUtil.escapeString(new File(existingDir, "Non exist path").absolutePath)
+
+        javaFile("src/test/java/ClasspathTest.java", """
             import org.junit.Test;
+            import java.io.*;
+            import java.util.*;
+            import java.util.stream.*;
+            import java.util.regex.Pattern;
 
             import static org.junit.Assert.*;
 
             public class ClasspathTest {
+                private static final File EXISTING_DIR = new File("$existingDir");
+                private static final File NON_EXISTING_DIR = new File("$nonExistingDir");
+
                 @Test
                 public void test() {
-                    String runtimeClasspath = System.getProperty("java.class.path");
-                    System.out.println(runtimeClasspath);
+                    List<File> runtimeClasspath = Arrays.stream(
+                            System.getProperty("java.class.path").split(Pattern.quote(File.pathSeparator))
+                        ).map(File::new)
+                        .collect(Collectors.toList());
 
-                    String userHome = System.getProperty("user.home");
-                    assertTrue("Must contain user home: " + userHome, runtimeClasspath.contains(userHome));
-                    assertFalse("Must not contain non-existent path", runtimeClasspath.contains("Non exist path"));
+                    runtimeClasspath.forEach(System.out::println);  // Help debugging
+
+                    assertTrue("Must contain existing dir: " + EXISTING_DIR, runtimeClasspath.contains(EXISTING_DIR));
+                    assertTrue("Must contain existing dir with star: " + EXISTING_DIR, runtimeClasspath.contains(new File(EXISTING_DIR, "*")));
+                    assertFalse("Must not contain non-existent path: " + NON_EXISTING_DIR, runtimeClasspath.contains(NON_EXISTING_DIR));
+                    assertFalse("Must not contain non-existent path with star: " + NON_EXISTING_DIR, runtimeClasspath.contains(new File(NON_EXISTING_DIR, "*")));
                 }
             }
-        ''')
+        """)
 
         buildFile """
             plugins {
@@ -56,20 +71,24 @@ class DefaultWorkerProcessBuilderIntegrationTest extends AbstractIntegrationSpec
             }
 
             tasks.test {
+                doNotTrackState("Non-existent inputs, skip fingerprint to avoid failure")
+
                 testLogging {
                     showStandardStreams = true
                     exceptionFormat = "full"
                 }
 
-                def nonExistent = files(
-                    System.getProperty("user.home"),
-                    System.getProperty("user.home") + File.separator + "*",
-                    System.getProperty("user.home") + File.separator + "Non exist path",
-                    System.getProperty("user.home") + File.separator + "Non exist path" + File.separator + "*"
+                def existingDir = new File("$existingDir")
+                def nonExistingDir = new File("$nonExistingDir")
+
+                def extraClasspath = files(
+                    existingDir,
+                    new File(existingDir, "*"),
+                    nonExistingDir,
+                    new File(nonExistingDir, "*")
                 )
-                doFirst {
-                    classpath += nonExistent
-                }
+
+                classpath += extraClasspath
             }
         """
 
