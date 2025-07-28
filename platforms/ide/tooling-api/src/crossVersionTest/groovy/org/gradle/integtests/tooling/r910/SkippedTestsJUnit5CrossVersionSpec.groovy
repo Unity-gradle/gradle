@@ -19,8 +19,7 @@ package org.gradle.integtests.tooling.r910
 import org.gradle.integtests.tooling.TestLauncherSpec
 import org.gradle.integtests.tooling.fixture.TargetGradleVersion
 import org.gradle.tooling.TestLauncher
-import org.gradle.tooling.events.test.internal.DefaultTestSkippedResult
-import org.junit.jupiter.api.Test
+import org.gradle.tooling.events.test.TestSkippedResult
 
 class SkippedTestsJUnit5CrossVersionSpec extends TestLauncherSpec {
     @Override
@@ -78,7 +77,7 @@ class SkippedTestsJUnit5CrossVersionSpec extends TestLauncherSpec {
     }
 
     @TargetGradleVersion(">=9.1.0")
-    def "reports display names of class and method"() {
+    def "reports status of skipped tests as progress events"() {
 
         when:
         launchTests { TestLauncher launcher ->
@@ -100,12 +99,12 @@ class SkippedTestsJUnit5CrossVersionSpec extends TestLauncherSpec {
                             test("disabledTest()") {
                                 operationDisplayName "a disabled test display name"
                                 testDisplayName "a disabled test display name"
-                                events.operation("a disabled test display name").finishEvent.result instanceof DefaultTestSkippedResult
+                                events.operation("a disabled test display name").finishEvent.result instanceof TestSkippedResult
                             }
                             testMethodSuite("bar()") {
                                 operationDisplayName "bar test display name"
                                 testDisplayName "bar test display name"
-                                events.operation("bar test display name").finishEvent.result instanceof DefaultTestSkippedResult
+                                events.operation("bar test display name").finishEvent.result instanceof TestSkippedResult
                             }
                         }
                     }
