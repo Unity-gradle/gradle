@@ -560,7 +560,9 @@ class IsolatedProjectsAccessFromGroovyDslIntegrationTest extends AbstractIsolate
         then:
         fixture.assertStateStoredAndDiscarded {
             projectsConfigured(":", ":sub", ":sub:sub-a", ":sub:sub-b")
+            problem("Build file 'sub/sub-a/build.gradle': line 2: Project ':sub' cannot dynamically look up a property in the parent project ':'")
             problem("Build file 'sub/sub-a/build.gradle': line 2: Project ':sub:sub-a' cannot dynamically look up a property in the parent project ':sub'")
+            problem("Build file 'sub/sub-b/build.gradle': line 2: Project ':sub' cannot dynamically look up a property in the parent project ':'")
             problem("Build file 'sub/sub-b/build.gradle': line 2: Project ':sub:sub-b' cannot dynamically look up a property in the parent project ':sub'")
         }
     }
@@ -595,6 +597,37 @@ class IsolatedProjectsAccessFromGroovyDslIntegrationTest extends AbstractIsolate
             problem("Build file 'a/build.gradle': line 5: Project ':a' cannot dynamically look up a property in the parent project ':'")
             problem("Build file 'a/build.gradle': line 6: Project ':a' cannot dynamically look up a method in the parent project ':'")
         }
+    }
+
+    @Issue("https://github.com/gradle/gradle/issues/26057")
+    def "invocations of GroovyObject methods on DefaultProject do not misattribute applied scripts"() {
+        createDirs("a")
+        settingsFile << """
+            include("a")
+        """
+        file("declarer.gradle") << """
+            def testFunction() {
+              println("running script testFunction")
+            }
+
+            ext.testFunction = this.&testFunction
+        """
+        file("invoker.gradle") << """
+            project.apply(from: "\${buildscript.sourceFile.parent}/declarer.gradle")
+            testFunction()
+        """
+        file("a/build.gradle") << """
+            project.apply(from: "../invoker.gradle")
+        """
+
+        when:
+        isolatedProjectsRun(":a:help")
+
+        then:
+        fixture.assertStateStored {
+            projectsConfigured(":", ":a")
+        }
+        outputContains("running script testFunction")
     }
 
     def "reports problem when cross-project access happens in a script-owned configure-action"() {

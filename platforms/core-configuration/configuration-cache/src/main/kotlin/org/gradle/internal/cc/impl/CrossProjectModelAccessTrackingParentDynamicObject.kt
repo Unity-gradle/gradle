@@ -39,33 +39,45 @@ class CrossProjectModelAccessTrackingParentDynamicObject(
     private val dynamicCallProblemReporting: DynamicCallProblemReporting
 ) : DynamicObject {
     override fun hasMethod(name: String, vararg arguments: Any?): Boolean {
-        onAccess(MemberKind.METHOD, name)
-        return delegate.hasMethod(name, *arguments)
+        val result = delegate.hasMethod(name, *arguments)
+        if (result) {
+            // Only report access if the method exists on the delegate.
+            onAccess(MemberKind.METHOD, name)
+        }
+        return result
     }
 
     override fun tryInvokeMethod(name: String, vararg arguments: Any?): DynamicInvokeResult {
-        onAccess(MemberKind.METHOD, name)
-        return delegate.tryInvokeMethod(name, *arguments)
+        return withAccessReporting(name, MemberKind.METHOD) {
+            delegate.tryInvokeMethod(name, *arguments)
+        }
     }
 
     override fun hasProperty(name: String): Boolean {
-        onAccess(MemberKind.PROPERTY, name)
-        return delegate.hasProperty(name)
+        val result = delegate.hasProperty(name)
+        if (result) {
+            // Only report access if the property exists on the delegate.
+            onAccess(MemberKind.PROPERTY, name)
+        }
+        return result
     }
 
     override fun tryGetProperty(name: String): DynamicInvokeResult {
-        onAccess(MemberKind.PROPERTY, name)
-        return delegate.tryGetProperty(name)
+        return withAccessReporting(name, MemberKind.PROPERTY) {
+            delegate.tryGetProperty(name)
+        }
     }
 
     override fun trySetProperty(name: String, value: Any?): DynamicInvokeResult {
-        onAccess(MemberKind.PROPERTY, name)
-        return delegate.trySetProperty(name, value)
+        return withAccessReporting(name, MemberKind.PROPERTY) {
+            delegate.trySetProperty(name, value)
+        }
     }
 
     override fun trySetPropertyWithoutInstrumentation(name: String, value: Any?): DynamicInvokeResult {
-        onAccess(MemberKind.PROPERTY, name)
-        return delegate.trySetPropertyWithoutInstrumentation(name, value)
+        return withAccessReporting(name, MemberKind.PROPERTY) {
+            delegate.trySetPropertyWithoutInstrumentation(name, value)
+        }
     }
 
     override fun getProperties(): MutableMap<String, *> {
@@ -74,38 +86,102 @@ class CrossProjectModelAccessTrackingParentDynamicObject(
     }
 
     override fun getMissingProperty(name: String): MissingPropertyException {
-        onAccess(MemberKind.PROPERTY, name)
+        // Intentionally do nothing, a missing property is not a dynamic access.
         return delegate.getMissingProperty(name)
     }
 
     override fun setMissingProperty(name: String): MissingPropertyException {
-        onAccess(MemberKind.PROPERTY, name)
+        // Intentionally do nothing, a missing property is not a dynamic access.
         return delegate.setMissingProperty(name)
     }
 
     override fun methodMissingException(name: String, vararg params: Any?): MissingMethodException {
-        onAccess(MemberKind.METHOD, name)
+        // Intentionally do nothing, a missing method is not a dynamic access.
         return delegate.methodMissingException(name, *params)
     }
 
     override fun getProperty(name: String): Any? {
-        onAccess(MemberKind.PROPERTY, name)
-        return delegate.getProperty(name)
+        return withLegacyAccessReporting(name, MemberKind.PROPERTY) {
+            delegate.getProperty(name)
+        }
     }
 
     override fun setProperty(name: String, value: Any?) {
-        onAccess(MemberKind.PROPERTY, name)
-        return delegate.setProperty(name, value)
+        withLegacyAccessReporting(name, MemberKind.PROPERTY) {
+            delegate.setProperty(name, value)
+        }
     }
 
     override fun invokeMethod(name: String, vararg arguments: Any?): Any? {
-        onAccess(MemberKind.METHOD, name)
-        return delegate.invokeMethod(name, *arguments)
+        return withLegacyAccessReporting(name, MemberKind.METHOD) {
+            delegate.invokeMethod(name, *arguments)
+        }
     }
 
     private
     enum class MemberKind {
         PROPERTY, METHOD
+    }
+
+    private fun <T : Any?> withLegacyAccessReporting(name: String, memberKind: MemberKind, tryCode: () -> T): T {
+        val key = Any()
+        dynamicCallProblemReporting.enterDynamicCall(key)
+        val result = try {
+            tryCode()
+        } catch (t: Throwable) {
+            rethrowIfMissingException(memberKind, t)
+            try {
+                // Assume this means that the thing exists, and threw an exception when accessed.
+                onAccess(memberKind, name)
+            } catch (accessError: Throwable) {
+                // If there is an access error, we primarily want to report the original exception,
+                // but leave the access error as a suppressed exception.
+                t.addSuppressed(accessError)
+            }
+            throw t
+        } finally {
+            dynamicCallProblemReporting.leaveDynamicCall(key)
+        }
+        // Only report access if the thing exists on the delegate.
+        onAccess(memberKind, name)
+        return result
+    }
+
+    private fun rethrowIfMissingException(memberKind: MemberKind, t: Throwable) {
+        when (memberKind) {
+            MemberKind.METHOD -> if (t is MissingMethodException) {
+                throw t
+            }
+
+            MemberKind.PROPERTY -> if (t is MissingPropertyException) {
+                throw t
+            }
+        }
+    }
+
+    private fun withAccessReporting(name: String, memberKind: MemberKind, tryCode: () -> DynamicInvokeResult): DynamicInvokeResult {
+        val key = Any()
+        dynamicCallProblemReporting.enterDynamicCall(key)
+        val result = try {
+            tryCode()
+        } catch (t: Throwable) {
+            try {
+                // Assume this means that the thing exists, and threw an exception when accessed.
+                onAccess(memberKind, name)
+            } catch (accessError: Throwable) {
+                // If there is an access error, we primarily want to report the original exception,
+                // but leave the access error as a suppressed exception.
+                t.addSuppressed(accessError)
+            }
+            throw t
+        } finally {
+            dynamicCallProblemReporting.leaveDynamicCall(key)
+        }
+        if (result.isFound) {
+            // Only report access if the thing exists on the delegate.
+            onAccess(memberKind, name)
+        }
+        return result
     }
 
     private
