@@ -82,6 +82,7 @@ class ProjectIdentityIntegrationTest extends AbstractIntegrationSpec {
         given:
         executer.requireIsolatedDaemons()
         settingsFile """
+            System.gc() // On re-run, encourage collection of the previous project identity
             rootProject.name = "root"
         """
         buildFile """
