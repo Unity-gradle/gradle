@@ -27,6 +27,7 @@ import org.junit.Test
 import java.io.File
 import org.junit.experimental.categories.Category
 import org.gradle.test.fixtures.Flaky
+import org.gradle.test.preconditions.UnitTestPreconditions
 
 /**
  * Assert that the cross-version protocol between `:kotlin-dsl-plugins` and `:kotlin-dsl-provider-plugins` is not broken.
@@ -83,7 +84,7 @@ class KotlinDslPluginCrossVersionSmokeTest : AbstractKotlinIntegrationTest() {
     }
 
     @Test
-    @Requires(NotEmbeddedExecutor::class, reason = "Kotlin version leaks on the classpath when running embedded")
+    @Requires(NotEmbeddedExecutor::class, UnitTestPreconditions.Jdk24OrEarlier::class, reason = "Kotlin version leaks on the classpath when running embedded; JDK 25 beta version did not work due to a version parsing issue")
     fun `can build plugin for previous unsupported Kotlin language version`() {
 
         val previousKotlinLanguageVersion = "1.4"
