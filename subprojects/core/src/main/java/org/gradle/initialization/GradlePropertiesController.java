@@ -51,10 +51,10 @@ public interface GradlePropertiesController {
      * @param setSystemProperties should system properties be set or not
      * @throws IllegalStateException if called with a different argument in the same build
      */
-    void loadGradlePropertiesFrom(BuildIdentifier buildId, File buildRootDir, boolean setSystemProperties);
+    void loadGradleProperties(BuildIdentifier buildId, File buildRootDir, boolean setSystemProperties);
 
     /**
-     * Unloads the properties so the next call to {@link #loadGradlePropertiesFrom(BuildIdentifier, File, boolean)} would reload them and
+     * Unloads the properties so the next call to {@link #loadGradleProperties(BuildIdentifier, File, boolean)} would reload them and
      * re-evaluate any property defining system properties and environment variables.
      */
     void unloadGradleProperties(BuildIdentifier buildId);

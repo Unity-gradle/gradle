@@ -61,7 +61,7 @@ public class DefaultGradlePropertiesController implements GradlePropertiesContro
     }
 
     @Override
-    public void loadGradlePropertiesFrom(BuildIdentifier buildId, File buildRootDir, boolean setSystemProperties) {
+    public void loadGradleProperties(BuildIdentifier buildId, File buildRootDir, boolean setSystemProperties) {
         getOrCreateGradleProperties(buildId).loadProperties(buildRootDir, setSystemProperties);
     }
 
