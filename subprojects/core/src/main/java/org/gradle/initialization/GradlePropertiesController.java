@@ -17,6 +17,7 @@
 package org.gradle.initialization;
 
 import org.gradle.api.artifacts.component.BuildIdentifier;
+import org.gradle.api.internal.project.ProjectIdentity;
 import org.gradle.api.internal.properties.GradleProperties;
 import org.gradle.internal.service.scopes.Scope;
 import org.gradle.internal.service.scopes.ServiceScope;
@@ -34,6 +35,8 @@ public interface GradlePropertiesController {
      * The {@link GradleProperties} instance attached to this service.
      */
     GradleProperties getGradleProperties(BuildIdentifier buildId);
+
+    GradleProperties getGradleProperties(ProjectIdentity projectId);
 
     /**
      * Loads the set of {@link GradleProperties} from the given directory and
@@ -55,4 +58,7 @@ public interface GradlePropertiesController {
      * re-evaluate any property defining system properties and environment variables.
      */
     void unloadGradleProperties(BuildIdentifier buildId);
+
+    void loadGradleProperties(ProjectIdentity projectId, File projectDir);
+
 }
