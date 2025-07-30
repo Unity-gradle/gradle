@@ -724,7 +724,9 @@ public class TestFile extends File {
 
                     @Override
                     public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                        if (!file.toFile().delete()) {
+                        if (!file.toFile().canWrite() && !file.toFile().setWritable(true)) {
+                            errorPaths.add(file.toFile().getCanonicalPath());
+                        } else if (!file.toFile().delete()) {
                             errorPaths.add(file.toFile().getCanonicalPath());
                         }
                         return FileVisitResult.CONTINUE;
