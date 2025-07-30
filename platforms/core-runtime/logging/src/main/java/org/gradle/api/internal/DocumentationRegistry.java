@@ -36,7 +36,15 @@ public class DocumentationRegistry {
      * Returns the location of the documentation for the given feature, referenced by id. The location may be local or remote.
      */
     public String getDocumentationFor(String id) {
+        validateId(id);
         return String.format("%s/userguide/%s.html", BASE_URL, id);
+    }
+
+    private void validateId(String id) {
+        if (id.endsWith(".html") || id.endsWith(".adoc")) {
+            throw new IllegalArgumentException("The id '" + id + "' should not end with '.html' or '.adoc'. " +
+                "Provide an id without its file extension to reference documentation.");
+        }
     }
 
 

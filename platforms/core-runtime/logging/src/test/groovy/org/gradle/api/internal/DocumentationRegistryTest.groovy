@@ -42,4 +42,13 @@ class DocumentationRegistryTest extends Specification {
         registry.getDslRefForProperty(org.gradle.api.Action.class, 'execute') == "https://docs.gradle.org/${gradleVersion.version}/dsl/org.gradle.api.Action.html#org.gradle.api.Action:execute"
     }
 
+    def "fails if the id contains a file extension"() {
+        when:
+        registry.getDocumentationFor('gradle_daemon.html')
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == "The id 'gradle_daemon.html' should not end with '.html' or '.adoc'. Provide an id without its file extension to reference documentation."
+    }
+
 }
