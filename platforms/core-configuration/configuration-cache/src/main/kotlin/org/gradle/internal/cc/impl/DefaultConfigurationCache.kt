@@ -17,6 +17,7 @@
 package org.gradle.internal.cc.impl
 
 import org.gradle.api.internal.GradleInternal
+import org.gradle.api.internal.artifacts.DefaultBuildIdentifier
 import org.gradle.api.internal.project.ProjectIdentity
 import org.gradle.api.internal.properties.GradleProperties
 import org.gradle.api.internal.provider.ConfigurationTimeBarrier
@@ -878,7 +879,7 @@ class DefaultConfigurationCache internal constructor(
                     override val valueSourceProviderFactory: ValueSourceProviderFactory
                         get() = host.service()
                     override val gradleProperties: GradleProperties
-                        get() = gradlePropertiesController.gradleProperties
+                        get() = host.service()
                 })
             }
         }
@@ -894,12 +895,14 @@ class DefaultConfigurationCache internal constructor(
 
     private
     fun loadGradleProperties() {
-        gradlePropertiesController.loadGradlePropertiesFrom(startParameter.buildTreeRootDirectory, true)
+        val rootBuildId = DefaultBuildIdentifier.ROOT
+        gradlePropertiesController.loadGradlePropertiesFrom(rootBuildId, startParameter.buildTreeRootDirectory, true)
     }
 
     private
     fun unloadGradleProperties() {
-        gradlePropertiesController.unloadGradleProperties()
+        val rootBuildId = DefaultBuildIdentifier.ROOT
+        gradlePropertiesController.unloadGradleProperties(rootBuildId)
     }
 
     private
