@@ -18,6 +18,7 @@ package org.gradle.api.internal.artifacts;
 import org.gradle.StartParameter;
 import org.gradle.api.Describable;
 import org.gradle.api.InvalidUserCodeException;
+import org.gradle.api.artifacts.ConfigurablePublishArtifact;
 import org.gradle.api.artifacts.ConfigurationContainer;
 import org.gradle.api.artifacts.dsl.ArtifactHandler;
 import org.gradle.api.artifacts.dsl.ComponentMetadataHandler;
@@ -28,15 +29,18 @@ import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.artifacts.dsl.DependencyLockingHandler;
 import org.gradle.api.artifacts.dsl.RepositoryHandler;
 import org.gradle.api.attributes.AttributesSchema;
+import org.gradle.api.capabilities.Capability;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.ProjectLayout;
 import org.gradle.api.internal.CollectionCallbackActionDecorator;
+import org.gradle.api.internal.ConfigurationServicesBundle;
 import org.gradle.api.internal.DocumentationRegistry;
 import org.gradle.api.internal.DomainObjectContext;
 import org.gradle.api.internal.GradleInternal;
 import org.gradle.api.internal.artifacts.configurations.ConfigurationContainerInternal;
 import org.gradle.api.internal.artifacts.configurations.DefaultConfigurationContainer;
 import org.gradle.api.internal.artifacts.configurations.DefaultConfigurationFactory;
+import org.gradle.api.internal.artifacts.configurations.DefaultConfigurationServicesBundle;
 import org.gradle.api.internal.artifacts.configurations.DependencyMetaDataProvider;
 import org.gradle.api.internal.artifacts.configurations.ResolutionStrategyFactory;
 import org.gradle.api.internal.artifacts.dsl.ComponentMetadataHandlerInternal;
@@ -96,6 +100,7 @@ import org.gradle.api.internal.attributes.AttributeDescriberRegistry;
 import org.gradle.api.internal.attributes.AttributesFactory;
 import org.gradle.api.internal.attributes.AttributesSchemaInternal;
 import org.gradle.api.internal.attributes.DefaultAttributesSchema;
+import org.gradle.api.internal.collections.DomainObjectCollectionFactory;
 import org.gradle.api.internal.file.FileCollectionFactory;
 import org.gradle.api.internal.file.FileLookup;
 import org.gradle.api.internal.file.FilePropertyFactory;
@@ -103,6 +108,7 @@ import org.gradle.api.internal.file.FileResolver;
 import org.gradle.api.internal.model.NamedObjectInstantiator;
 import org.gradle.api.internal.project.ProjectStateRegistry;
 import org.gradle.api.internal.provider.PropertyFactory;
+import org.gradle.api.internal.tasks.TaskDependencyFactory;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.problems.internal.InternalProblems;
 import org.gradle.api.provider.ProviderFactory;
@@ -146,6 +152,7 @@ import org.gradle.internal.service.ServiceRegistration;
 import org.gradle.internal.service.ServiceRegistrationProvider;
 import org.gradle.internal.service.ServiceRegistry;
 import org.gradle.internal.service.ServiceRegistryBuilder;
+import org.gradle.internal.typeconversion.NotationParser;
 import org.gradle.internal.vfs.FileSystemAccess;
 import org.gradle.util.internal.SimpleMapInterner;
 
@@ -177,6 +184,7 @@ public class DefaultDependencyManagementServices implements DependencyManagement
         FileCollectionFactory fileCollectionFactory,
         DomainObjectContext owner
     ) {
+        @SuppressWarnings("resource")
         ServiceRegistry services = ServiceRegistryBuilder.builder()
             .parent(parent)
             .provider(registration -> {
@@ -575,6 +583,33 @@ public class DefaultDependencyManagementServices implements DependencyManagement
                 }
                 return repositories;
             };
+        }
+
+        @Provides
+        ConfigurationServicesBundle createConfigurationServicesBundle(FileCollectionFactory fileCollectionFactory,
+                                                                      ObjectFactory objectFactory,
+                                                                      NotationParser<Object, ConfigurablePublishArtifact> artifactNotationParser,
+                                                                      NotationParser<Object, Capability> capabilityNotationParser,
+                                                                      AttributesFactory attributesFactory,
+                                                                      CollectionCallbackActionDecorator collectionCallbackActionDecorator,
+                                                                      DomainObjectCollectionFactory domainObjectCollectionFactory,
+                                                                      CalculatedValueContainerFactory calculatedValueContainerFactory,
+                                                                      DefaultConfigurationFactory defaultConfigurationFactory,
+                                                                      TaskDependencyFactory taskDependencyFactory,
+                                                                      InternalProblems problems) {
+            return new DefaultConfigurationServicesBundle(
+                calculatedValueContainerFactory,
+                objectFactory,
+                fileCollectionFactory,
+                taskDependencyFactory,
+                attributesFactory,
+                domainObjectCollectionFactory,
+                defaultConfigurationFactory,
+                artifactNotationParser,
+                capabilityNotationParser,
+                collectionCallbackActionDecorator,
+                problems
+            );
         }
 
         private static List<ResolutionAwareRepository> collectRepositories(RepositoryHandler repositoryHandler) {
