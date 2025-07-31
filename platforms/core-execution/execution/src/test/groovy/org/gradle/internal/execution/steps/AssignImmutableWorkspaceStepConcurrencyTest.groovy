@@ -33,6 +33,9 @@ import org.gradle.internal.execution.workspace.ImmutableWorkspaceProvider
 import java.time.Duration
 import java.util.concurrent.CountDownLatch
 import java.util.function.BiFunction
+import java.util.function.Supplier
+
+import static org.gradle.internal.execution.workspace.ImmutableWorkspaceProvider.AtomicMoveImmutableWorkspace.*
 
 class AssignImmutableWorkspaceStepConcurrencyTest extends StepSpecBase<IdentityContext> {
     def workspacesRoot = temporaryFolder.file("workspaces").createDir()
@@ -42,10 +45,11 @@ class AssignImmutableWorkspaceStepConcurrencyTest extends StepSpecBase<IdentityC
     def deleter = TestFiles.deleter()
     def fileSystemAccess = TestFiles.fileSystemAccess()
     def immutableWorkspaceMetadataStore = Stub(ImmutableWorkspaceMetadataStore) {
-        loadWorkspaceMetadata(_ as File) >> Stub(ImmutableWorkspaceMetadata) {
+        def workspaceMetadata = Stub(ImmutableWorkspaceMetadata) {
             getOriginMetadata() >> Stub(OriginMetadata)
             getOutputPropertyHashes() >> ImmutableListMultimap.of()
         }
+        loadWorkspaceMetadata(_ as File) >> Optional.of(workspaceMetadata)
     }
     def outputSnapshotter = new DefaultOutputSnapshotter(TestFiles.fileCollectionSnapshotter())
 
@@ -148,18 +152,35 @@ class AssignImmutableWorkspaceStepConcurrencyTest extends StepSpecBase<IdentityC
         }
 
         @Override
-        ImmutableWorkspace getWorkspace(String path) {
+        AtomicMoveImmutableWorkspace getAtomicMoveWorkspace(String path) {
             def temporaryWorkspace = temporaryWorkspaces.pop()
-            return new ImmutableWorkspace() {
+            return new AtomicMoveImmutableWorkspace() {
                 @Override
                 File getImmutableLocation() {
                     return immutableWorkspace
                 }
 
                 @Override
-                <T> T withTemporaryWorkspace(ImmutableWorkspace.TemporaryWorkspaceAction<T> action) {
+                <T> T withTemporaryWorkspace(TemporaryWorkspaceAction<T> action) {
                     temporaryWorkspace.mkdirs()
                     return action.executeInTemporaryWorkspace(temporaryWorkspace)
+                }
+            }
+        }
+
+        @Override
+        LockingImmutableWorkspace getLockingWorkspace(String path) {
+            return new LockingImmutableWorkspace() {
+                @Override
+                File getImmutableLocation() {
+                    return new File(immutableWorkspace, "workspace")
+                }
+
+                @Override
+                <T> T withWorkspaceLock(Supplier<T> supplier) {
+                    immutableWorkspace.mkdirs()
+                    immutableWorkspace.file(immutableWorkspace.name + ".lock").createFile()
+                    return null
                 }
             }
         }
