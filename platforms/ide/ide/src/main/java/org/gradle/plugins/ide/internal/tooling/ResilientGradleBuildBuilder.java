@@ -54,12 +54,6 @@ public class ResilientGradleBuildBuilder extends GradleBuildBuilder {
         }
     }
 
-//    @Override
-//    public DefaultGradleBuild create(BuildState target) {
-//        ensureProjectsLoaded(target);
-//        return convert(target, new LinkedHashMap<>());
-//    }
-
     @Override
     protected DefaultGradleBuild convert(BuildState targetBuild, Map<BuildState, DefaultGradleBuild> all) {
         DefaultGradleBuild model = all.get(targetBuild);
@@ -99,14 +93,4 @@ public class ResilientGradleBuildBuilder extends GradleBuildBuilder {
             }
         }
     }
-//
-//    @Override
-//    protected void addIncludedBuilds(GradleInternal gradle, DefaultGradleBuild model, Map<BuildState, DefaultGradleBuild> all) {
-//        for (IncludedBuildInternal reference : gradle.includedBuilds()) {
-//            BuildState target = reference.getTarget();
-//            if (target != null) {
-//                model.addIncludedBuild(convert(target, all));
-//            }
-//        }
-//    }
 }

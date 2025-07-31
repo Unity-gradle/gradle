@@ -37,11 +37,6 @@ class FailedSyncIntegrationTest extends AbstractIntegrationSpec implements Tooli
         then:
         model.paths == []
         model.build != null
-
-//        def inlcudedBuild = model.build.includedBuilds.getAt(0)
-//        inlcudedBuild != null
-//        inlcudedBuild.failure == null
-//        failureDescriptionContains("Script compilation error")
     }
 
     def "basic project - broken root build file with build action"() {
@@ -150,8 +145,6 @@ class FailedSyncIntegrationTest extends AbstractIntegrationSpec implements Tooli
         inlcudedBuild != null
         inlcudedBuild.failure != null
         inlcudedBuild.failure.message.contains("Script compilation error")
-
-//        failureDescriptionContains("Script compilation error")
     }
 
     def "basic project w/ included build - broken included build settings file and build script - strict mode - build action"() {
