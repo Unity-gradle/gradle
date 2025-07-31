@@ -25,40 +25,70 @@ import org.gradle.internal.service.scopes.ServiceScope;
 import java.io.File;
 
 /**
- * Controls the state (not loaded / loaded) of the attached {@link GradleProperties} instance
- * so that the set of Gradle properties is deterministically loaded only once per build.
+ * Manages the lifecycle of {@link GradleProperties} for builds and projects within a build tree.
+ *
+ * <p>Properties go through three states:
+ * <ul>
+ * <li><b>Not loaded</b> - Initial state, accessing properties throws {@code IllegalStateException}</li>
+ * <li><b>Loaded</b> - Properties loaded from {@code gradle.properties} files and available for use</li>
+ * <li><b>Unloaded</b> - Build properties reset to not loaded state for reloading</li>
+ * </ul>
+ *
+ * <p>Build-scoped properties are loaded once per build from the build root directory and can optionally
+ * set system properties. Project-scoped properties merge project-local properties with their build's
+ * properties, inheriting build settings while allowing project-specific overrides.
  */
 @ServiceScope(Scope.BuildTree.class)
 public interface GradlePropertiesController {
 
     /**
-     * The {@link GradleProperties} instance attached to this service.
+     * Returns build-scoped {@link GradleProperties} for the specified build.
+     * Properties must be loaded first using {@link #loadGradleProperties(BuildIdentifier, File, boolean)}.
+     *
+     * @throws IllegalStateException if properties have not been loaded yet
      */
     GradleProperties getGradleProperties(BuildIdentifier buildId);
 
+    /**
+     * Returns project-scoped {@link GradleProperties} for the specified project.
+     * Properties must be loaded first using {@link #loadGradleProperties(ProjectIdentity, File)}.
+     *
+     * @throws IllegalStateException if properties have not been loaded yet
+     */
     GradleProperties getGradleProperties(ProjectIdentity projectId);
 
     /**
-     * Loads the set of {@link GradleProperties} from the given directory and
-     * makes it available to the build.
+     * Loads build-scoped {@link GradleProperties} from the specified build root directory.
      *
-     * Optionally sets a system properties after load.
+     * <p>Properties are loaded from {@code gradle.properties} file in the build root directory.
+     * If {@code setSystemProperties} is true, properties with {@code systemProp.} prefix are
+     * set as system properties.
      *
-     * This method should be called only once per build but multiple calls with the
-     * same argument are allowed.
+     * <p>Can be called multiple times with the same arguments but will load only once.
      *
-     * @param buildRootDir directory where to look for the {@code gradle.properties} file
-     * @param setSystemProperties should system properties be set or not
-     * @throws IllegalStateException if called with a different argument in the same build
+     * @param buildRootDir directory containing the {@code gradle.properties} file
+     * @param setSystemProperties whether to set system properties from loaded properties
+     * @throws IllegalStateException if called with different directory for the same build
      */
     void loadGradleProperties(BuildIdentifier buildId, File buildRootDir, boolean setSystemProperties);
 
     /**
-     * Unloads the properties so the next call to {@link #loadGradleProperties(BuildIdentifier, File, boolean)} would reload them and
-     * re-evaluate any property defining system properties and environment variables.
+     * Unloads build-scoped properties, resetting them to the not loaded state.
+     *
+     * <p>Subsequent calls to {@link #loadGradleProperties(BuildIdentifier, File, boolean)} will
+     * reload properties and re-evaluate system property assignments.
      */
     void unloadGradleProperties(BuildIdentifier buildId);
 
+    /**
+     * Loads project-scoped {@link GradleProperties} from the specified project directory.
+     *
+     * <p>Properties are loaded from {@code gradle.properties} file in the project directory
+     * and merged with the build-scoped properties, with project properties taking precedence.
+     * System properties are never set from project-scoped properties.
+     *
+     * @param projectDir directory containing the project's {@code gradle.properties} file
+     */
     void loadGradleProperties(ProjectIdentity projectId, File projectDir);
 
 }
