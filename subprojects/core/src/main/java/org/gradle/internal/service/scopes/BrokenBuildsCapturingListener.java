@@ -18,10 +18,32 @@ package org.gradle.internal.service.scopes;
 
 import org.gradle.internal.build.BuildState;
 import org.gradle.internal.composite.BuildIncludeListener;
+import org.gradle.internal.problems.failure.Failure;
+import org.gradle.internal.problems.failure.FailureFactory;
+import org.jspecify.annotations.Nullable;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class BrokenBuildsCapturingListener implements BuildIncludeListener {
-    @Override
-    public void buildInclusionFailed(BuildState buildState, Exception exception) {
 
+    private final FailureFactory failureFactory;
+    Map<BuildState, Failure> brokenBuilds = new HashMap<>();
+
+    public BrokenBuildsCapturingListener(
+        FailureFactory failureFactory
+    ) {
+        this.failureFactory = failureFactory;
+    }
+
+    @Override
+    public void buildInclusionFailed(BuildState buildState, @Nullable Exception exception) {
+        Failure failure = failureFactory.create(exception);
+        brokenBuilds.put(buildState, failure);
+    }
+
+    @Override
+    public Map<BuildState, Failure> getBrokenBuilds() {
+        return brokenBuilds;
     }
 }

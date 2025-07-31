@@ -32,6 +32,8 @@ import org.gradle.internal.buildtree.BuildModelParameters;
 import org.gradle.internal.buildtree.GlobalDependencySubstitutionRegistry;
 import org.gradle.internal.composite.BuildIncludeListener;
 import org.gradle.internal.event.ListenerManager;
+import org.gradle.internal.problems.failure.Failure;
+import org.gradle.internal.problems.failure.FailureFactory;
 import org.gradle.internal.reflect.Instantiator;
 import org.gradle.internal.service.Provides;
 import org.gradle.internal.service.ServiceRegistration;
@@ -40,6 +42,9 @@ import org.gradle.internal.service.scopes.AbstractGradleModuleServices;
 import org.gradle.internal.service.scopes.BrokenBuildsCapturingListener;
 import org.gradle.internal.typeconversion.NotationParser;
 import org.gradle.plugin.use.resolve.internal.PluginResolverContributor;
+
+import java.util.Collections;
+import java.util.Map;
 
 public class CompositeBuildServices extends AbstractGradleModuleServices {
 
@@ -63,15 +68,20 @@ public class CompositeBuildServices extends AbstractGradleModuleServices {
         }
 
         @Provides
-        BuildIncludeListener createBuildIncludeListener(BuildModelParameters buildModelParameters){
+        BuildIncludeListener createBuildIncludeListener(BuildModelParameters buildModelParameters, FailureFactory failureFactory) {
             if(buildModelParameters.isResilientModelBuilding()){
-                return new BrokenBuildsCapturingListener();
+                return new BrokenBuildsCapturingListener(failureFactory);
             }
             //ignored in non-resilient model building
             return new BuildIncludeListener() {;
                 @Override
                 public void buildInclusionFailed(BuildState buildState, Exception exception) {
                     // No-op in non-resilient model building
+                }
+
+                @Override
+                public Map<BuildState, Failure> getBrokenBuilds() {
+                    return Collections.emptyMap();
                 }
             };
         }
