@@ -27,6 +27,7 @@ public abstract class GradleCoreProblemGroup {
     private static final ProblemGroup TASK_SELECTION_PROBLEM_GROUP = ProblemGroup.create("task-selection", "Task selection");
     private static final ProblemGroup VERSION_CATALOG_PROBLEM_GROUP = ProblemGroup.create("dependency-version-catalog", "Version catalog");
     private static final ProblemGroup VARIANT_RESOLUTION_PROBLEM_GROUP = ProblemGroup.create("dependency-variant-resolution", "Variant resolution");
+    private static final ProblemGroup SCRIPT_PROBLEM_GROUP = ProblemGroup.create("scripts", "Scripts");
 
     public static CompilationProblemGroup compilation() {
         return COMPILATION_PROBLEM_GROUP;
@@ -54,6 +55,10 @@ public abstract class GradleCoreProblemGroup {
 
     public static ProblemGroup variantResolution() {
         return VARIANT_RESOLUTION_PROBLEM_GROUP;
+    }
+
+    public static ProblemGroup script() {
+        return SCRIPT_PROBLEM_GROUP;
     }
 
     public interface CompilationProblemGroup {
