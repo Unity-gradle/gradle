@@ -113,9 +113,7 @@ public class AssignImmutableWorkspaceStep<C extends IdentityContext> implements 
         Step<? super PreviousExecutionContext, ? extends CachingResult> delegate
     ) {
         this(deleter, fileSystemAccess, workspaceMetadataStore, outputSnapshotter, delegate,
-            OperatingSystem.current().isWindows()
-                ? LockingStrategy.WORKSPACE_LOCK
-                : LockingStrategy.ATOMIC_MOVE
+            LockingStrategy.WORKSPACE_LOCK
         );
     }
 
@@ -143,13 +141,14 @@ public class AssignImmutableWorkspaceStep<C extends IdentityContext> implements 
 
         if (lockingStrategy == LockingStrategy.WORKSPACE_LOCK) {
             LockingImmutableWorkspace workspace = workspaceProvider.getLockingWorkspace(uniqueId);
-            return workspace.withWorkspaceLock(() ->
-                loadImmutableWorkspaceIfExists(work, workspace)
-                    .orElseGet(() -> {
-                        deleteStaleFiles(workspace.getImmutableLocation());
-                        return executeInWorkspace(work, context, workspace.getImmutableLocation());
-                    })
-            );
+            return loadImmutableWorkspaceIfExists(work, workspace).orElseGet(() ->
+                workspace.withWorkspaceLock(() ->
+                    loadImmutableWorkspaceIfExists(work, workspace)
+                        .orElseGet(() -> {
+                            deleteStaleFiles(workspace.getImmutableLocation());
+                            return executeInWorkspace(work, context, workspace.getImmutableLocation());
+                        })
+                ));
         } else {
             AtomicMoveImmutableWorkspace workspace = workspaceProvider.getAtomicMoveWorkspace(uniqueId);
             return loadImmutableWorkspaceIfExists(work, workspace)
