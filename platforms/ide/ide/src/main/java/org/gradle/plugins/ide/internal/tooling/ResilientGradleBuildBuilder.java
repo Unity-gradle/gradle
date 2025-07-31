@@ -93,7 +93,7 @@ public class ResilientGradleBuildBuilder extends GradleBuildBuilder {
     private void addFailedBuilds(BuildState targetBuild, Map<BuildState, DefaultGradleBuild> all, DefaultGradleBuild model) {
         for (Map.Entry<BuildState, Failure> entry : brokenBuilds.entrySet()) {
             BuildState parent = entry.getKey().getParent();
-            if( parent != null && parent.equals(targetBuild)) {
+            if (parent != null && parent.equals(targetBuild)) {
                 DefaultGradleBuild failedBuild = convert(entry.getKey(), all);
                 model.addIncludedBuild(failedBuild);
             }
