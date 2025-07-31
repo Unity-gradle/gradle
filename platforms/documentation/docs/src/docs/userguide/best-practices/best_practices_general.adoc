@@ -299,7 +299,7 @@ Without setting a name explicitly, the root project's name implicitly defaults t
 Some directory names may not be valid or suitable as project names, such as those containing spaces, Gradle logical path separators or other special characters.
 The paths to tasks in build should be able to be specified reliably regardless of where the build lives.
 
-Explicitly setting the root project's name also ensures that it referred to consistently.
+Explicitly setting the root project's name also ensures that it is referred to consistently.
 Project names are used in various places, such as error messages, logs, and reports.
 Builds may execute on a variety of machines or environments, such as CI servers, and should report the same root project name anywhere to make the project more comprehensible.
 
