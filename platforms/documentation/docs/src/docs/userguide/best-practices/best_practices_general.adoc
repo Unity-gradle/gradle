@@ -313,7 +313,7 @@ include::sample[dir="snippets/bestPractices/nameYourRootProject-avoid/groovy",fi
 ====
 
 In this build, the settings file is empty and the root project is unnamed.
-If you try running the `projects` report, you will see an implicit name used for the root project that is based on the build's current location.
+If you try running the `projects` report, you will see a name based on the build's current location.
 
 ==== Do This Instead
 
