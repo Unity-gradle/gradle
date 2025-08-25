@@ -22,6 +22,7 @@ dependencies {
     api(projects.concurrent)
     api(projects.configurationCacheBase)
     api(projects.configurationProblemsBase)
+    api(projects.coreSerializationCodecs)
     api(projects.core)
     api(projects.coreApi)
     api(projects.dependencyManagement)
@@ -42,14 +43,11 @@ dependencies {
     api(libs.kotlinStdlib)
 
     // TODO - it might be good to allow projects to contribute state to save and restore, rather than have this project know about everything
-    implementation(projects.buildDiscovery)
-    implementation(projects.buildDiscoveryApi)
     implementation(projects.buildEvents)
     implementation(projects.buildOption)
     implementation(projects.buildProcessServices)
     implementation(projects.classloaders)
     implementation(projects.coreKotlinExtensions)
-    implementation(projects.coreSerializationCodecs)
     implementation(projects.dependencyManagementSerializationCodecs)
     implementation(projects.encryptionServices)
     implementation(projects.enterpriseOperations)
@@ -121,6 +119,14 @@ dependencies {
         because("Includes tests for builds with the enterprise plugin and TestKit involved; ConfigurationCacheJacocoIntegrationTest requires JVM distribution")
     }
     crossVersionTestDistributionRuntimeOnly(projects.distributionsCore)
+}
+
+jvmCompile {
+    compilations {
+        named("main") {
+            targetJvmVersion = 17
+        }
+    }
 }
 
 packageCycles {
