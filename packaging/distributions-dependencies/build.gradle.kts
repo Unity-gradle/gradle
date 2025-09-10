@@ -28,7 +28,7 @@ val jaxbVersion = "3.0.0"
 val junit5Version = "5.12.2"
 val mavenVersion = "3.9.5"
 val mavenResolverVersion = "1.9.16" // Should remain in-sync with `mavenVersion`
-val nativePlatformVersion = "0.22-milestone-28"
+val nativePlatformVersion = "0.22-milestone-29"
 /**
  * Should be in sync with:
  * tooling API-related docs & snippets
@@ -220,7 +220,6 @@ dependencies {
         api(libs.mavenResolverSupplier)         { version { strictly(mavenResolverVersion) }}
         api(libs.mavenResolverTransportFile)    { version { strictly(mavenResolverVersion) }}
         api(libs.mavenResolverTransportHttp)    { version { strictly(mavenResolverVersion) }}
-        api(libs.mina)                  { version { strictly("2.0.17") }}
         api(libs.mockitoCore)           { version { strictly("5.17.0") }}
         api(libs.mockitoKotlin)         { version { strictly("4.1.0") }}
         api(libs.mockwebserver)         { version { strictly("4.12.0") }}

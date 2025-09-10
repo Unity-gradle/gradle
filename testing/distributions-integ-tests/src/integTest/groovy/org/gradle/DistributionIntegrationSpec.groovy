@@ -34,7 +34,8 @@ import static org.hamcrest.MatcherAssert.assertThat
 
 abstract class DistributionIntegrationSpec extends AbstractIntegrationSpec {
 
-    protected static final THIRD_PARTY_LIB_COUNT = 126
+    protected static final NATIVE_PLATFORM_BINARIES = 16
+    protected static final THIRD_PARTY_LIB_COUNT = 112
 
     @Shared
     String baseVersion = GradleVersion.current().baseVersion.version
@@ -125,6 +126,8 @@ abstract class DistributionIntegrationSpec extends AbstractIntegrationSpec {
         "service-registry-builder",
         "service-registry-impl",
         "snapshots",
+        "software-features",
+        "software-features-api",
         "stdlib-java-extensions",
         "stdlib-kotlin-extensions",
         "time",
@@ -182,7 +185,7 @@ abstract class DistributionIntegrationSpec extends AbstractIntegrationSpec {
     }
 
     int getLibJarsCount() {
-        coreLibJarsCount + packagedPluginsJarCount + agentJarsCount + thirdPartyLibJarsCount
+        coreLibJarsCount + packagedPluginsJarCount + agentJarsCount + thirdPartyLibJarsCount + NATIVE_PLATFORM_BINARIES
     }
 
     def "distribution size should not change too much"() {

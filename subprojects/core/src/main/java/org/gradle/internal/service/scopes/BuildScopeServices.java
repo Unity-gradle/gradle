@@ -52,6 +52,7 @@ import org.gradle.api.internal.initialization.ScriptHandlerFactory;
 import org.gradle.api.internal.plugins.DefaultPluginRegistry;
 import org.gradle.api.internal.plugins.PluginInspector;
 import org.gradle.api.internal.plugins.PluginRegistry;
+import org.gradle.api.internal.project.BuildScopedTaskResolver;
 import org.gradle.api.internal.project.DefaultProjectRegistry;
 import org.gradle.api.internal.project.DefaultProjectTaskLister;
 import org.gradle.api.internal.project.HoldsProjectState;
@@ -75,7 +76,9 @@ import org.gradle.api.internal.provider.sources.process.ExecSpecFactory;
 import org.gradle.api.internal.provider.sources.process.ProcessOutputProviderFactory;
 import org.gradle.api.internal.resources.ApiTextResourceAdapter;
 import org.gradle.api.internal.resources.DefaultResourceHandler;
+import org.gradle.api.internal.tasks.DefaultTaskDependencyFactory;
 import org.gradle.api.internal.tasks.TaskDependencyFactory;
+import org.gradle.api.internal.tasks.TaskResolver;
 import org.gradle.api.internal.tasks.TaskStatistics;
 import org.gradle.api.invocation.BuildInvocationDetails;
 import org.gradle.api.model.ObjectFactory;
@@ -149,7 +152,6 @@ import org.gradle.initialization.buildsrc.BuildSourceBuilder;
 import org.gradle.initialization.buildsrc.BuildSrcBuildListenerFactory;
 import org.gradle.initialization.buildsrc.BuildSrcProjectConfigurationAction;
 import org.gradle.initialization.layout.BuildLayout;
-import org.gradle.initialization.layout.BuildLayoutConfiguration;
 import org.gradle.initialization.layout.BuildLayoutFactory;
 import org.gradle.initialization.layout.ResolvedBuildLayout;
 import org.gradle.internal.actor.ActorFactory;
@@ -216,7 +218,7 @@ import org.gradle.internal.service.ServiceRegistry;
 import org.gradle.internal.snapshot.CaseSensitivity;
 import org.gradle.model.internal.inspect.ModelRuleSourceDetector;
 import org.gradle.plugin.management.internal.PluginHandler;
-import org.gradle.plugin.software.internal.SoftwareTypeRegistry;
+import org.gradle.plugin.software.internal.SoftwareFeatureRegistry;
 import org.gradle.plugin.use.internal.PluginRequestApplicator;
 import org.gradle.process.ExecOperations;
 import org.gradle.process.internal.DefaultExecOperations;
@@ -316,7 +318,7 @@ public class BuildScopeServices implements ServiceRegistrationProvider {
 
     @Provides
     protected BuildLayout createBuildLocations(BuildLayoutFactory buildLayoutFactory, BuildDefinition buildDefinition) {
-        return buildLayoutFactory.getLayoutFor(new BuildLayoutConfiguration(buildDefinition.getStartParameter()));
+        return buildLayoutFactory.getLayoutFor(buildDefinition.getStartParameter().toBuildLayoutConfiguration());
     }
 
     @Provides
@@ -469,6 +471,12 @@ public class BuildScopeServices implements ServiceRegistrationProvider {
             taskClassInfoStore,
             new TaskFactory()
         );
+    }
+
+    @Provides
+    protected TaskDependencyFactory createTaskDependencyFactory(BuildState currentBuild) {
+        TaskResolver taskResolver = new BuildScopedTaskResolver(currentBuild);
+        return new DefaultTaskDependencyFactory(taskResolver, null);
     }
 
     @Provides
@@ -778,8 +786,8 @@ public class BuildScopeServices implements ServiceRegistrationProvider {
     }
 
     @Provides
-    protected SharedModelDefaults createSharedModelDefaults(Instantiator instantiator, SoftwareTypeRegistry softwareTypeRegistry) {
-        return instantiator.newInstance(DefaultSharedModelDefaults.class, softwareTypeRegistry);
+    protected SharedModelDefaults createSharedModelDefaults(Instantiator instantiator, SoftwareFeatureRegistry softwareFeatureRegistry) {
+        return instantiator.newInstance(DefaultSharedModelDefaults.class, softwareFeatureRegistry);
     }
 
     @Provides

@@ -25,8 +25,11 @@ import org.gradle.api.tasks.testing.TestFailure;
 import org.gradle.internal.concurrent.ThreadSafe;
 import org.gradle.internal.id.IdGenerator;
 import org.gradle.internal.time.Clock;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.Description;
+import org.junit.runner.JUnitCore;
 import org.junit.runner.Request;
 import org.junit.runner.RunWith;
 import org.junit.runner.Runner;
@@ -34,7 +37,6 @@ import org.junit.runner.manipulation.Filter;
 import org.junit.runner.manipulation.Filterable;
 import org.junit.runner.manipulation.NoTestsRemainException;
 import org.junit.runner.notification.RunListener;
-import org.junit.runner.notification.RunNotifier;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -45,6 +47,7 @@ public class JUnitTestClassExecutor implements Action<String> {
     private final JUnitSpec spec;
     private final TestClassExecutionListener executionListener;
     private final RunListener listener;
+    private @Nullable CategoryFilter categoryFilter;
 
     public JUnitTestClassExecutor(
         ClassLoader applicationClassLoader,
@@ -59,32 +62,79 @@ public class JUnitTestClassExecutor implements Action<String> {
         this.spec = spec;
         this.executionListener = executionListener;
         this.listener = new JUnitTestEventAdapter(threadSafeResultProcessor, clock, idGenerator);
+
+        if (spec.hasCategoryConfiguration()) {
+            verifyJUnitCategorySupport(applicationClassLoader);
+            categoryFilter = new CategoryFilter(spec.getIncludeCategories(), spec.getExcludeCategories(), applicationClassLoader);
+            categoryFilter.verifyCategories(applicationClassLoader);
+        }
     }
 
     @Override
     public void execute(String testClassName) {
         executionListener.testClassStarted(testClassName);
         try {
-            runTestClass(testClassName);
+            maybeRunTestClass(testClassName);
             executionListener.testClassFinished(null);
         } catch (Throwable throwable) {
             executionListener.testClassFinished(TestFailure.fromTestFrameworkFailure(throwable));
         }
     }
 
-    private void runTestClass(String testClassName) throws ClassNotFoundException {
+    private void maybeRunTestClass(String testClassName) throws ClassNotFoundException {
         final Class<?> testClass = Class.forName(testClassName, false, applicationClassLoader);
         if (isNestedClassInsideEnclosedRunner(testClass)) {
             return;
         }
-        List<Filter> filters = new ArrayList<Filter>();
-        if (spec.hasCategoryConfiguration()) {
-            verifyJUnitCategorySupport();
-            filters.add(new CategoryFilter(spec.getIncludeCategories(), spec.getExcludeCategories(), applicationClassLoader));
+
+        // See if there is anything left to run after applying filters, as we could filter
+        // out every method on this class, or even the entire class itself.
+        Request filteredRequest = buildFilteredRequest(testClass);
+        if (filteredRequest == null) {
+            return;
         }
 
-        Request request = Request.aClass(testClass);
-        Runner runner = request.getRunner();
+        runRequest(filteredRequest);
+    }
+
+    /**
+     * Builds a new {@link Request} for the given test class, applying any filters present in the {@link #spec}.
+     * <p>
+     * Note that we can't use {@link Request#runner(Runner)} for this, as it didn't exist in JUnit 4.0. But since there's
+     * only one abstract method to implement on {@link Runner}, we can easily build an implementation.
+     *
+     * @param testClass the test class we're requesting to run
+     * @return the filtered request ready to be run, or {@code null} if no tests should be run according to the filters
+     */
+    @Nullable
+    private Request buildFilteredRequest(Class<?> testClass) {
+        Request originalRequest = Request.aClass(testClass);
+        Runner runner = originalRequest.getRunner();
+
+        List<Filter> filters = buildFilters(testClass.getName(), runner);
+        if (runner instanceof Filterable) {
+            Filterable filterable = (Filterable) runner;
+            for (Filter filter : filters) {
+                try {
+                    filterable.filter(filter);
+                } catch (NoTestsRemainException e) {
+                    // Ignore
+                    return null;
+                }
+            }
+        } else if (allTestsFiltered(runner, filters)) {
+            return null;
+        }
+
+        return new FilteredGradleRequest(runner);
+    }
+
+    @Nullable
+    private List<Filter> buildFilters(String testClassName, Runner filteredRunner) {
+        List<Filter> filters = new ArrayList<>();
+        if (categoryFilter != null) {
+            filters.add(categoryFilter);
+        }
 
         TestFilterSpec filterSpec = spec.getFilter();
         if (!filterSpec.getIncludedTests().isEmpty()
@@ -94,32 +144,18 @@ public class JUnitTestClassExecutor implements Action<String> {
 
             // For test suites (including suite-like custom Runners), if the test suite class
             // matches the filter, run the entire suite instead of filtering away its contents.
-            if (!runner.getDescription().isSuite() || !matcher.matchesTest(testClassName, null)) {
+            if (!filteredRunner.getDescription().isSuite() || !matcher.matchesTest(testClassName, null)) {
                 filters.add(new MethodNameFilter(matcher));
             }
         }
 
-        if (runner instanceof Filterable) {
-            Filterable filterable = (Filterable) runner;
-            for (Filter filter : filters) {
-                try {
-                    filterable.filter(filter);
-                } catch (NoTestsRemainException e) {
-                    // Ignore
-                    return;
-                }
-            }
-        } else if (allTestsFiltered(runner, filters)) {
-            return;
-        }
+        return filters;
+    }
 
-        if (spec.isDryRun()) {
-            runner = new JUnitTestDryRunner(runner);
-        }
-
-        RunNotifier notifier = new RunNotifier();
-        notifier.addListener(listener);
-        runner.run(notifier);
+    private void runRequest(Request request) {
+        JUnitCore junit = new JUnitCore();
+        junit.addListener(listener);
+        junit.run(request);
     }
 
     // https://github.com/gradle/gradle/issues/2319
@@ -137,7 +173,7 @@ public class JUnitTestClassExecutor implements Action<String> {
         return runWith != null && Enclosed.class.equals(runWith.value());
     }
 
-    private void verifyJUnitCategorySupport() {
+    private static void verifyJUnitCategorySupport(ClassLoader applicationClassLoader) {
         boolean failed = false;
         try {
             applicationClassLoader.loadClass("org.junit.experimental.categories.Category");
@@ -147,9 +183,7 @@ public class JUnitTestClassExecutor implements Action<String> {
             // need to verify the older has at least Description#getTestClass.
             Class<?> desc = applicationClassLoader.loadClass("org.junit.runner.Description");
             desc.getMethod("getTestClass"); // Added in JUnit 4.6
-        } catch (ClassNotFoundException e) {
-            failed = true;
-        } catch (NoSuchMethodException e) {
+        } catch (ClassNotFoundException | NoSuchMethodException e) {
             failed = true;
         }
 
@@ -204,6 +238,24 @@ public class JUnitTestClassExecutor implements Action<String> {
         @Override
         public String describe() {
             return "Includes matching test methods";
+        }
+    }
+
+    @NullMarked
+    private final class FilteredGradleRequest extends Request {
+        private final Runner runner;
+
+        private FilteredGradleRequest(Runner filteredRunner) {
+            if (spec.isDryRun()) {
+                runner = new JUnitTestDryRunner(filteredRunner);
+            } else {
+                runner = filteredRunner;
+            }
+        }
+
+        @Override
+        public Runner getRunner() {
+            return runner;
         }
     }
 }
