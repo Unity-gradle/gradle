@@ -17,9 +17,9 @@ description = "Provides a platform dependency to align all distribution versions
 
 val antVersion = "1.10.15"
 // Don't forget to bump versions in
-// subprojects/base-services/src/main/java/org/gradle/internal/classanalysis/AsmConstants.java
+// platforms/core-runtime/base-asm/src/main/java/org/gradle/model/internal/asm/AsmConstants.java
 // when upgrading ASM.
-val asmVersion = "9.7.1"
+val asmVersion = "9.8"
 val awsS3Version = "1.12.780"
 val bouncycastleVersion = "1.81"
 val hamcrestVersion = "3.0"
@@ -28,7 +28,7 @@ val jaxbVersion = "3.0.0"
 val junit5Version = "5.12.2"
 val mavenVersion = "3.9.5"
 val mavenResolverVersion = "1.9.16" // Should remain in-sync with `mavenVersion`
-val nativePlatformVersion = "0.22-milestone-28"
+val nativePlatformVersion = "0.22-milestone-29"
 /**
  * Should be in sync with:
  * tooling API-related docs & snippets
@@ -220,7 +220,6 @@ dependencies {
         api(libs.mavenResolverSupplier)         { version { strictly(mavenResolverVersion) }}
         api(libs.mavenResolverTransportFile)    { version { strictly(mavenResolverVersion) }}
         api(libs.mavenResolverTransportHttp)    { version { strictly(mavenResolverVersion) }}
-        api(libs.mina)                  { version { strictly("2.0.17") }}
         api(libs.mockitoCore)           { version { strictly("5.17.0") }}
         api(libs.mockitoKotlin)         { version { strictly("4.1.0") }}
         api(libs.mockwebserver)         { version { strictly("4.12.0") }}
@@ -239,7 +238,6 @@ dependencies {
         api(libs.sshdSftp)              { version { strictly(sshdVersion) }}
         api(libs.testcontainers)        { version { strictly("1.20.4") }}
         api(libs.testcontainersSpock)   { version { strictly("1.20.4") }}
-        api(libs.typesafeConfig)        { version { strictly("1.3.3") }}
         api(libs.xerces)                { version { strictly("2.12.0") }}
         api(libs.xmlunit)               { version { strictly("1.6") }}
     }

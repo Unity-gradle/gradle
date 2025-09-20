@@ -44,19 +44,14 @@ val testInterceptorsImplementation: Configuration by configurations.getting {
 
 errorprone {
     disabledChecks.addAll(
-        "DefaultCharset", // 4 occurrences
-        "Finally", // 1 occurrences
-        "IdentityHashMapUsage", // 1 occurrences
         "ModifyCollectionInEnhancedForLoop", // 1 occurrences
         "NonApiType", // 1 occurrences
         "NonCanonicalType", // 16 occurrences
         "ReferenceEquality", // 2 occurrences
-        "ReturnValueIgnored", // 1 occurrences
         "StreamResourceLeak", // 6 occurrences
         "TypeParameterShadowing", // 1 occurrences
         "TypeParameterUnusedInFormals", // 2 occurrences
         "UndefinedEquals", // 1 occurrences
-        "UnusedMethod", // 18 occurrences
     )
 }
 
@@ -69,8 +64,6 @@ dependencies {
     api(projects.buildCacheLocal)
     api(projects.buildCachePackaging)
     api(projects.buildCacheSpi)
-    api(projects.buildDiscovery)
-    api(projects.buildDiscoveryApi)
     api(projects.buildInitSpecs)
     api(projects.buildOperations)
     api(projects.buildOption)
@@ -112,6 +105,7 @@ dependencies {
     api(projects.serviceLookup)
     api(projects.serviceProvider)
     api(projects.snapshots)
+    api(projects.softwareFeatures)
     api(projects.stdlibJavaExtensions)
     api(projects.time)
     api(projects.versionedCache)
@@ -128,11 +122,16 @@ dependencies {
     api(libs.nativePlatform)
 
     implementation(projects.buildOperationsTrace)
-    implementation(projects.io)
+    implementation(projects.groovyLoader)
     implementation(projects.inputTracking)
+    implementation(projects.io)
     implementation(projects.modelGroovy)
     implementation(projects.problemsRendering)
     implementation(projects.serviceRegistryBuilder)
+    implementation(projects.coreFlowServicesApi) {
+        because("DefaultBuildServicesRegistry has ordering dependency with FlowScope")
+    }
+    implementation(projects.softwareFeaturesApi)
 
     implementation(libs.asmCommons)
     implementation(libs.commonsCompress)
